@@ -18,7 +18,7 @@ while True:
 
         with open(path, "w", encoding="utf-8") as f:
             json.dump(response, f)
-
+        os.chmod(path, 0o444)      # только чтение
         scooters = response["data"]["bikes"]
 
         print(f"{now} - amount of scooters: {len(scooters)}")

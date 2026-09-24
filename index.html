@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -75,82 +75,82 @@ tr.pick td { background:#eef5fd; }
 <aside id="side">
   <header>
     <h1>Cascais Sweep</h1>
-    <p>Находим брошенные самокаты и строим маршрут их сбора</p>
+    <p>Detects abandoned scooters and plans the municipal collection route</p>
   </header>
   <nav>
-    <button data-tab="now" class="on">Сбор</button>
-    <button data-tab="kpi">Спрос</button>
-    <button data-tab="scen">Эффект</button>
-    <button data-tab="new">Новые станции</button>
+    <button data-tab="now" class="on">Collection</button>
+    <button data-tab="kpi">Demand</button>
+    <button data-tab="scen">Impact</button>
+    <button data-tab="new">New stations</button>
   </nav>
 
   <!-- ============ СБОР ============ -->
   <section id="now" class="on">
-    <div class="hero"><b id="count">–</b><span>брошено сейчас<br><small class="muted">&gt; 30 м от станции, &gt; 2 ч</small></span></div>
-    <input type="range" id="t" aria-label="Время">
+    <div class="hero"><b id="count">–</b><span>abandoned now<br><small class="muted">&gt; 30 m from a station, &gt; 2 h</small></span></div>
+    <input type="range" id="t" aria-label="Time">
     <div class="row">
       <button class="btn primary" id="play">▶ Play</button>
-      <select id="speed" aria-label="Скорость"><option value="400">×1</option><option value="150" selected>×3</option><option value="50">×10</option></select>
+      <select id="speed" aria-label="Speed"><option value="400">×1</option><option value="150" selected>×3</option><option value="50">×10</option></select>
       <span class="when" id="when"></span>
     </div>
     <div class="legend">
-      <span><i class="dot" style="background:var(--sev1)"></i>2–4 ч</span>
-      <span><i class="dot" style="background:var(--sev2)"></i>4–8 ч</span>
-      <span><i class="dot" style="background:var(--sev3)"></i>8+ ч</span>
-      <span><i class="dot" style="background:var(--blue);border-radius:2px"></i>станция</span>
-      <span><i class="dot" style="background:#b9b8b3"></i>в следующий заезд</span>
+      <span><i class="dot" style="background:var(--sev1)"></i>2–4 h</span>
+      <span><i class="dot" style="background:var(--sev2)"></i>4–8 h</span>
+      <span><i class="dot" style="background:var(--sev3)"></i>8+ h</span>
+      <span><i class="dot" style="background:var(--blue);border-radius:2px"></i>station</span>
+      <span><i class="dot" style="background:#b9b8b3"></i>next run</span>
     </div>
 
-    <h2>Приоритеты</h2>
+    <h2>Priorities</h2>
     <div class="weights">
-      <label>Время простоя <b id="w-time-v"></b><input type="range" id="w-time" min="0" max="5" step="0.5" value="3"></label>
-      <label>Далеко от станции <b id="w-dist-v"></b><input type="range" id="w-dist" min="0" max="5" step="0.5" value="2"></label>
-      <label>Не заберут сами (модель) <b id="w-self-v"></b><input type="range" id="w-self" min="0" max="5" step="0.5" value="1.5"></label>
-      <label>🚏 Мешает пешеходам (у остановки) <b id="w-stop-v"></b><input type="range" id="w-stop" min="0" max="5" step="0.5" value="1.5"></label>
-      <label>Время на заезд <b id="shift-v"></b><input type="range" id="shift" min="0.5" max="4" step="0.25" value="1.5"></label>
+      <label>Time abandoned <b id="w-time-v"></b><input type="range" id="w-time" min="0" max="5" step="0.5" value="3"></label>
+      <label>Far from a station <b id="w-dist-v"></b><input type="range" id="w-dist" min="0" max="5" step="0.5" value="2"></label>
+      <label>Unlikely to be re-rented (model) <b id="w-self-v"></b><input type="range" id="w-self" min="0" max="5" step="0.5" value="1.5"></label>
+      <label>🚏 Blocks pedestrians (bus stop) <b id="w-stop-v"></b><input type="range" id="w-stop" min="0" max="5" step="0.5" value="1.5"></label>
+      <label>Time per run <b id="shift-v"></b><input type="range" id="shift" min="0.5" max="4" step="0.25" value="1.5"></label>
     </div>
     <p class="muted" id="picked"></p>
 
-    <h2>Маршрут сбора</h2>
+    <h2>Collection route</h2>
     <div class="tiles">
-      <div class="tile"><b id="r-km">–</b><small>км, оптимальный</small></div>
-      <div class="tile"><b id="r-naive">–</b><small>км, по порядку появления</small></div>
-      <div class="tile good"><b id="r-save">–</b><small>экономия пробега</small></div>
-      <div class="tile"><b id="r-time">–</b><small>время смены</small></div>
+      <div class="tile"><b id="r-km">–</b><small>km, optimised</small></div>
+      <div class="tile"><b id="r-naive">–</b><small>km, in order of appearance</small></div>
+      <div class="tile good"><b id="r-save">–</b><small>distance saved</small></div>
+      <div class="tile"><b id="r-time">–</b><small>run time</small></div>
     </div>
-    <p class="muted" style="margin-top:8px">🚐 Склад можно перетащить на карте. Фургон: <span id="cap"></span> самокатов за заезд.</p>
+    <p class="muted" style="margin-top:8px">🚐 Drag the depot on the map. Van: <span id="cap"></span> vehicles per run.</p>
     <div id="stops"></div>
   </section>
 
   <!-- ============ KPI ============ -->
   <section id="kpi">
-    <h2>Показатель на карте</h2>
+    <h2>Map metric</h2>
     <select id="metric" style="width:100%">
-      <option value="starts">Спрос: начала поездок в день</option>
-      <option value="ends">Приток: окончания поездок в день</option>
-      <option value="net">Дисбаланс: приток − спрос</option>
-      <option value="abandoned">Брошенных в день</option>
-      <option value="abandon_rate">Доля брошенных среди окончаний</option>
-      <option value="hours_avg">Среднее время простоя, ч</option>
+      <option value="starts">Demand: trips started per day</option>
+      <option value="ends">Inflow: trips ended per day</option>
+      <option value="net">Imbalance: inflow − demand</option>
+      <option value="abandoned">Abandoned per day</option>
+      <option value="abandon_rate">Share of trip ends abandoned</option>
+      <option value="hours_avg">Average time abandoned, h</option>
     </select>
     <div class="legend" id="hexlegend"></div>
     <div class="tiles" id="kpitiles"></div>
 
-    <h2>Поездки по часам (в среднем за день)</h2>
+    <h2>Trips by hour (daily average)</h2>
     <svg class="chart" id="ch-trips"></svg>
-    <h2>Когда работают техники: заборы по часам</h2>
+    <h2>When Bird works: pickups & servicing by hour</h2>
     <svg class="chart" id="ch-pick"></svg>
-    <h2>Сколько брошено одновременно, по часам</h2>
+    <h2>Vehicles abandoned at the same time, by hour</h2>
     <svg class="chart" id="ch-ab"></svg>
     <div class="note" id="insight"></div>
   </section>
 
   <!-- ============ ЭФФЕКТ ============ -->
   <section id="scen">
-    <h2>Муниципальный фургон: смена 9–18</h2>
-    <p class="muted">Симуляция на реальных данных за 3 недели. По будням фургон муниципалитета делает заезды: берёт до 18 самых важных брошенных самокатов, объезжает, возвращается и планирует следующий заезд по свежей ситуации.</p>
+    <h2>Municipal van: 09:00–18:00 shift</h2>
+    <p class="muted">Simulation on 3 weeks of real data. On weekdays the municipal van makes runs: it takes up to 18 of the highest-priority abandoned vehicles, collects them, returns and re-plans the next run from the current situation.</p>
     <table id="scentable"></table>
-    <h2>Часы простоя брошенных самокатов за 3 недели</h2>
+    <h2>Hours vehicles stood abandoned (3 weeks)</h2>
     <svg class="chart" id="ch-scen"></svg>
     <div class="note" id="scennote"></div>
     <p class="muted" id="assump"></p>
@@ -158,8 +158,8 @@ tr.pick td { background:#eef5fd; }
 
   <!-- ============ НОВЫЕ СТАНЦИИ ============ -->
   <section id="new">
-    <h2>Где самокаты бросают регулярно</h2>
-    <p class="muted">Кластеры брошенных (DBSCAN, 60 м). Новая станция в центре кластера (зона 15 м + 30 м) убрала бы эти случаи.</p>
+    <h2>Where vehicles are abandoned repeatedly</h2>
+    <p class="muted">Clusters of abandonments (DBSCAN, 60 m). A new station at the cluster centre (15 m area + 30 m buffer) would have covered these cases.</p>
     <div id="cands"></div>
     <div class="note" id="newnote"></div>
   </section>
@@ -172,7 +172,7 @@ tr.pick td { background:#eef5fd; }
 <script>
 const A = window.ANALYTICS, S = A.summary;
 const AB = window.ABANDONED.map(d => ({ ...d, t0:Date.parse(d.abandoned_from), t1:Date.parse(d.end), ts:Date.parse(d.start) }));
-const fmt = (x, d=0) => x.toLocaleString('ru-RU', { maximumFractionDigits:d, minimumFractionDigits:d });
+const fmt = (x, d=0) => x.toLocaleString('en-GB', { maximumFractionDigits:d, minimumFractionDigits:d });
 
 // ---------------------------------------------------------------- карта
 const map = L.map('map', { preferCanvas:true, zoomControl:true }).setView([38.700, -9.40], 13);
@@ -190,7 +190,7 @@ const hexLayer = L.layerGroup(), candLayer = L.layerGroup();
 let depot = S.depot.slice();
 const depotMarker = L.marker(depot, { draggable:true, zIndexOffset:1000,
   icon:L.divIcon({ className:'depot-icon', html:'🚐', iconSize:[22,22] }) })
-  .bindTooltip('Склад (перетащи)').addTo(map);
+  .bindTooltip('Depot (drag me)').addTo(map);
 depotMarker.on('dragend', e => { const p = e.target.getLatLng(); depot = [p.lat, p.lng]; renderNow(true); });
 
 // ---------------------------------------------------------------- маршрут
@@ -263,7 +263,7 @@ const W = () => ({ dist:+document.getElementById('w-dist').value, time:+document
                    self:+document.getElementById('w-self').value, stop:+document.getElementById('w-stop').value, shift:+document.getElementById('shift').value });
 
 function priority(d, t, w) {
-  if (happened(d.reserved_at, t)) return { score:0, why:'забронирован — заберёт пользователь' };
+  if (happened(d.reserved_at, t)) return { score:0, why:'reserved — a rider will take it' };
   const hours = (t - d.ts) / 3.6e6;
   const time = Math.min(hours / 12, 1);                                    // 12 ч и больше = максимум
   const dist = Math.min(d.dist_to_station_m / 300, 1);                   // 300 м и дальше = максимум
@@ -273,8 +273,8 @@ function priority(d, t, w) {
   const stop = sd === undefined || sd === null ? 0 : Math.max(0, Math.min(1, (40 - sd) / 20));
   // Решение Артёма после ответа João: время главное, дальше от станции — важнее; поломки и батарея — забота Bird
   const score = w.time * time + w.dist * dist + w.self * notSelf + w.stop * stop;
-  const why = [ happened(d.serviced_at, t) ? '⚠️ Bird был на месте и оставил' : '',
-                stop > 0 ? `🚏 у остановки, ${fmt(sd)} м` : '' ].filter(Boolean).join(', ');
+  const why = [ happened(d.serviced_at, t) ? '⚠️ Bird serviced it and left it' : '',
+                stop > 0 ? `🚏 at a bus stop, ${fmt(sd)} m` : '' ].filter(Boolean).join(', ');
   return { score, dist, time, notSelf, stop, why };
 }
 
@@ -312,24 +312,24 @@ function renderNow(force) {
   const t = tMin + slider.value * STEP;
   const live = AB.filter(d => d.t0 <= t && d.t1 > t);
   document.getElementById('count').textContent = live.length;
-  document.getElementById('when').textContent = new Date(t).toLocaleString('ru-RU',
+  document.getElementById('when').textContent = new Date(t).toLocaleString('en-GB',
     { weekday:'short', day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
 
   vehLayer.clearLayers(); routeLayer.clearLayers();
   const w = W();
   ['w-dist','w-time','w-self','w-stop'].forEach(id => document.getElementById(id + '-v').textContent = document.getElementById(id).value);
-  document.getElementById('shift-v').textContent = w.shift + ' ч';
+  document.getElementById('shift-v').textContent = w.shift + ' h';
   const PAll = live.map(d => [d.lat, d.lng]);
   const pr = live.map(d => priority(d, t, w));
   const chosenIdx = pick(PAll, pr.map(p => p.score), w.shift * 60);
   const isChosen = new Set(chosenIdx);
   document.getElementById('picked').textContent = live.length
-    ? `За заезд ${w.shift} ч успеваем забрать ${chosenIdx.length} из ${live.length}. Серые — в следующий заезд.` : '';
+    ? `In a ${w.shift} h run the van collects ${chosenIdx.length} of ${live.length}. Grey ones wait for the next run.` : '';
   const ids = new Set(live.map(d => d.device_id + d.ts));
   live.forEach((d, i) => {
     const h = (t - d.ts) / 3.6e6, p = pr[i];
     L.circleMarker(PAll[i], { radius:7, color:'#fff', weight:2, fillColor: isChosen.has(i) ? sevHex(h) : '#b9b8b3', fillOpacity:1 })
-      .bindTooltip(`<b>Приоритет ${fmt(p.score,2)}</b>${p.why ? ' · ' + p.why : ''}<br>Стоит ${fmt(h,1)} ч · ${fmt(d.dist_to_station_m)} м от станции<br>батарея ${fmt((d.battery||0)*100)}% · шанс, что заберут сами ${p.notSelf !== undefined ? fmt((1-p.notSelf)*100) + '%' : '—'}`)
+      .bindTooltip(`<b>Priority ${fmt(p.score,2)}</b>${p.why ? ' · ' + p.why : ''}<br>Standing ${fmt(h,1)} h · ${fmt(d.dist_to_station_m)} m from station<br>battery ${fmt((d.battery||0)*100)}% · chance a rider takes it ${p.notSelf !== undefined ? fmt((1-p.notSelf)*100) + '%' : '—'}`)
       .addTo(vehLayer);
     if (!prevIds.has(d.device_id + d.ts) && prevIds.size)
       L.marker(PAll[i], { interactive:false, icon:L.divIcon({ className:'', html:'<div class="pulse"></div>', iconSize:[18,18] }) }).addTo(vehLayer);
@@ -350,15 +350,15 @@ function renderNow(force) {
     const LC = ['#0d366b','#6b3fa0','#0f7a55','#9a4a00'][li % 4];
     loop.forEach(i => L.marker(P[i], { interactive:false, icon:L.divIcon({ className:'',
       html:`<div style="font:700 10px system-ui;color:#fff;display:inline-block;background:${LC};border-radius:8px;padding:0 4px;transform:translate(9px,-14px);white-space:nowrap">${++num}</div>` }) }).addTo(routeLayer));
-    html += `<div class="loopname"><i class="dot" style="background:${['#0d366b','#6b3fa0','#0f7a55','#9a4a00'][li % 4]}"></i>Заезд ${li+1} · ${loop.length} самокатов · ${fmt(tourLen(loop,P),1)} км</div><ol class="stops" start="${num - loop.length + 1}">` +
-      loop.map(i => `<li><a target="_blank" href="https://www.google.com/maps/dir/?api=1&destination=${P[i][0]},${P[i][1]}">${fmt(sel[i].dist_to_station_m)} м от станции · ${fmt((t-sel[i].ts)/3.6e6,1)} ч</a></li>`).join('') + '</ol>';
+    html += `<div class="loopname"><i class="dot" style="background:${['#0d366b','#6b3fa0','#0f7a55','#9a4a00'][li % 4]}"></i>Run ${li+1} · ${loop.length} vehicles · ${fmt(tourLen(loop,P),1)} km</div><ol class="stops" start="${num - loop.length + 1}">` +
+      loop.map(i => `<li><a target="_blank" href="https://www.google.com/maps/dir/?api=1&destination=${P[i][0]},${P[i][1]}">${fmt(sel[i].dist_to_station_m)} m from station · ${fmt((t-sel[i].ts)/3.6e6,1)} h</a></li>`).join('') + '</ol>';
   });
   const nv = naiveLen(sel, P);
   const minutes = total / S.speed_kmh * 60 + sel.length * S.stop_min;
   document.getElementById('r-km').textContent = fmt(total, 1);
   document.getElementById('r-naive').textContent = fmt(nv, 1);
   document.getElementById('r-save').textContent = '−' + fmt(Math.max(0, 1 - total / nv) * 100) + '%';
-  document.getElementById('r-time').textContent = `${Math.floor(minutes/60)} ч ${Math.round(minutes%60)} мин`;
+  document.getElementById('r-time').textContent = `${Math.floor(minutes/60)} h ${Math.round(minutes%60)} min`;
   box.innerHTML = html;
 }
 slider.oninput = () => renderNow();
@@ -368,7 +368,7 @@ const playBtn = document.getElementById('play');
 function stop() { clearInterval(timer); timer = null; playBtn.textContent = '▶ Play'; }
 playBtn.onclick = () => {
   if (timer) return stop();
-  playBtn.textContent = '⏸ Пауза';
+  playBtn.textContent = '⏸ Pause';
   timer = setInterval(() => { slider.value = (+slider.value + 1) % (+slider.max + 1); renderNow(); }, +document.getElementById('speed').value);
 };
 document.getElementById('speed').onchange = () => { if (timer) { stop(); playBtn.click(); } };
@@ -388,7 +388,7 @@ document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
 // ---------------------------------------------------------------- KPI шестиугольники
 const SEQ = ['#cde2fb','#9ec5f4','#6da7ec','#3987e5','#256abf','#184f95','#0d366b'];
 const DIV = ['#1c5cab','#6da7ec','#cde2fb','#f0efec','#f6c3c2','#ea8584','#b92f2f'];   // синий = не хватает, красный = копятся
-const LABELS = { starts:'поездок/день', ends:'поездок/день', net:'поездок/день', abandoned:'случаев/день', abandon_rate:'', hours_avg:'ч' };
+const LABELS = { starts:'trips/day', ends:'trips/day', net:'trips/day', abandoned:'cases/day', abandon_rate:'', hours_avg:'h' };
 function drawHex() {
   const m = document.getElementById('metric').value, feats = A.hex.features;
   hexLayer.clearLayers();
@@ -408,21 +408,21 @@ function drawHex() {
     const v = f.properties[m], c = color(v);
     if (!c) continue;
     L.geoJSON(f, { style:{ color:'#fff', weight:1, fillColor:c, fillOpacity:.78 } })
-      .bindTooltip(`<b>${fv(v)} ${LABELS[m]}</b><br>старты ${fmt(f.properties.starts,1)}/день · финиши ${fmt(f.properties.ends,1)}/день<br>брошено ${fmt(f.properties.abandoned*S.days)} раз за 3 недели`)
+      .bindTooltip(`<b>${fv(v)} ${LABELS[m]}</b><br>starts ${fmt(f.properties.starts,1)}/day · ends ${fmt(f.properties.ends,1)}/day<br>abandoned ${fmt(f.properties.abandoned*S.days)} times in 3 weeks`)
       .addTo(hexLayer);
   }
   const pal = m === 'net' ? DIV : SEQ;
   document.getElementById('hexlegend').innerHTML = m === 'net'
-    ? `<span><i class="dot" style="background:${DIV[0]}"></i>самокатов не хватает</span><span><i class="dot" style="background:${DIV[3]};border:1px solid #ccc"></i>баланс</span><span><i class="dot" style="background:${DIV[6]}"></i>копятся</span>`
-    : `<span>меньше</span>` + pal.map(c => `<i class="dot" style="background:${c};margin:0"></i>`).join('') + `<span>больше</span>`;
+    ? `<span><i class="dot" style="background:${DIV[0]}"></i>vehicles missing</span><span><i class="dot" style="background:${DIV[3]};border:1px solid #ccc"></i>balanced</span><span><i class="dot" style="background:${DIV[6]}"></i>vehicles pile up</span>`
+    : `<span>less</span>` + pal.map(c => `<i class="dot" style="background:${c};margin:0"></i>`).join('') + `<span>more</span>`;
 }
 document.getElementById('metric').onchange = drawHex;
 drawHex();
 document.getElementById('kpitiles').innerHTML = `
-  <div class="tile"><b>${fmt(S.trips_per_day)}</b><small>настоящих поездок в день</small></div>
-  <div class="tile"><b>${fmt(S.trips_fake_share*100)}%</b><small>поездок-«пустышек» отфильтровано</small></div>
-  <div class="tile"><b>${fmt(S.abandoned_per_day)}</b><small>новых брошенных в день</small></div>
-  <div class="tile"><b>${fmt(S.median_hours,1)} ч</b><small>медиана простоя после 2 ч</small></div>`;
+  <div class="tile"><b>${fmt(S.trips_per_day)}</b><small>real trips per day</small></div>
+  <div class="tile"><b>${fmt(S.trips_fake_share*100)}%</b><small>failed “ghost” trips removed</small></div>
+  <div class="tile"><b>${fmt(S.abandoned_per_day)}</b><small>new abandonments per day</small></div>
+  <div class="tile"><b>${fmt(S.median_hours,1)} h</b><small>median time abandoned (after 2 h)</small></div>`;
 
 // ---------------------------------------------------------------- графики (SVG)
 const tip = document.getElementById('tip');
@@ -449,19 +449,19 @@ function bars(id, values, colorVar, unit, highlight) {
   el.addEventListener('mouseleave', () => tip.style.display = 'none');
 }
 const H_ = A.hourly;
-bars('ch-trips', H_.trips, '--blue', 'поездок');
-bars('ch-pick', H_.pickups, '--text-2', 'заборов', i => i >= 6 && i <= 13);
-bars('ch-ab', H_.abandoned_now, '--orange', 'брошено одновременно');
+bars('ch-trips', H_.trips, '--blue', 'trips');
+bars('ch-pick', H_.pickups, '--text-2', 'pickups', i => i >= 6 && i <= 13);
+bars('ch-ab', H_.abandoned_now, '--orange', 'abandoned at once');
 document.getElementById('insight').innerHTML =
-  `<b>Как работает Bird.</b> ${fmt(S.pickups_peak_share*100)}% своих заборов и обслуживания Bird делает с 6:00 до 14:00. Пик поездок — днём и вечером, и всё, что бросили после обеда, Bird не трогает до утра. Отсюда медиана простоя ${fmt(S.median_hours,1)} ч — и работа для муниципального фургона.`;
+  `<b>How Bird operates.</b> ${fmt(S.pickups_peak_share*100)}% of Bird's pickups and servicing happen between 06:00 and 14:00. Trips peak in the afternoon and evening, so anything abandoned after lunch waits until the next morning. Hence a median of ${fmt(S.median_hours,1)} h abandoned — and the work for the municipal van.`;
 
 // ---------------------------------------------------------------- сценарии
 const sc = A.scenarios, base = sc[0].abandoned_hours;
-const NAMES = { now:'Сейчас (только Bird)', naive:'Фургон, объезд по порядку', opt:'Фургон, наш маршрут' };
-const SHORT = { now:'сейчас', naive:'по порядку', opt:'наш маршрут' };
+const NAMES = { now:'Today (Bird only)', naive:'Van, first-come order', opt:'Van, our route' };
+const SHORT = { now:'today', naive:'first-come', opt:'our route' };
 document.getElementById('scentable').innerHTML =
-  `<tr><th>Вариант</th><th>Часы простоя</th><th>Средний</th><th>Собрано/день</th><th>км/день</th></tr>` +
-  sc.map((s, i) => `<tr class="${s.name==='opt'?'pick':''}"><td>${NAMES[s.name]}</td><td>${fmt(s.abandoned_hours)}${i?` <small class="muted">(−${fmt((1-s.abandoned_hours/base)*100)}%)</small>`:''}</td><td>${fmt(s.mean_h,1)} ч</td><td>${i?fmt(s.collected_per_day,1):'—'}</td><td>${i?fmt(s.km_per_day):'—'}</td></tr>`).join('');
+  `<tr><th>Scenario</th><th>Hours abandoned</th><th>Average</th><th>Collected/day</th><th>km/day</th></tr>` +
+  sc.map((s, i) => `<tr class="${s.name==='opt'?'pick':''}"><td>${NAMES[s.name]}</td><td>${fmt(s.abandoned_hours)}${i?` <small class="muted">(−${fmt((1-s.abandoned_hours/base)*100)}%)</small>`:''}</td><td>${fmt(s.mean_h,1)} h</td><td>${i?fmt(s.collected_per_day,1):'—'}</td><td>${i?fmt(s.km_per_day):'—'}</td></tr>`).join('');
 (function scenChart() {
   const Wd = 340, rowH = 28, H = sc.length * rowH + 6, pl = 92, mx = base;
   let g = `<svg viewBox="0 0 ${Wd} ${H}">`;
@@ -475,28 +475,28 @@ document.getElementById('scentable').innerHTML =
 })();
 const opt = sc.find(s => s.name === 'opt'), nv = sc.find(s => s.name === 'naive');
 document.getElementById('scennote').innerHTML =
-  `<b>Один муниципальный фургон с нашим маршрутом</b> сокращает время простоя брошенных самокатов на <b>${fmt((1-opt.abandoned_hours/base)*100)}%</b> (в среднем ${fmt(sc[0].mean_h,1)} → ${fmt(opt.mean_h,1)} ч). ` +
-  `По сравнению с объездом по порядку он собирает <b>${fmt(opt.collected_per_day,1)} самокатов в день вместо ${fmt(nv.collected_per_day,1)}</b> (+${fmt((opt.collected_per_day/nv.collected_per_day-1)*100)}%) и проезжает ${fmt(opt.km_per_day)} км вместо ${fmt(nv.km_per_day)}: ${fmt(opt.km_per_vehicle,1)} км на самокат вместо ${fmt(nv.km_per_vehicle,1)}.` +
-  `<br><br><b>⚠️ Bird был на месте и оставил.</b> В ${S.serviced_left_cases} случаях техник Bird обслужил на месте самокат, который уже был брошен (вне станции больше 2 ч), и оставил его там же. После этого самокат стоял ещё в среднем ${fmt(S.serviced_left_median_after_h,1)} ч — всего <b>${fmt(S.serviced_left_hours)} ч</b> простоя. Инструмент фиксирует такие случаи с местом и временем — основание для штрафа оператору.`;
+  `<b>One municipal van with our route</b> cuts the time vehicles stand abandoned by <b>${fmt((1-opt.abandoned_hours/base)*100)}%</b> (average ${fmt(sc[0].mean_h,1)} → ${fmt(opt.mean_h,1)} h). ` +
+  `Compared with first-come order it collects <b>${fmt(opt.collected_per_day,1)} vehicles a day instead of ${fmt(nv.collected_per_day,1)}</b> (+${fmt((opt.collected_per_day/nv.collected_per_day-1)*100)}%) while driving ${fmt(opt.km_per_day)} km instead of ${fmt(nv.km_per_day)}: ${fmt(opt.km_per_vehicle,1)} km per vehicle instead of ${fmt(nv.km_per_vehicle,1)}.` +
+  `<br><br><b>⚠️ Bird was there and left it.</b> In ${S.serviced_left_cases} cases a Bird technician serviced on the spot a vehicle that was already abandoned (outside a station for over 2 h) and left it there. It then stood for another ${fmt(S.serviced_left_median_after_h,1)} h (median) — <b>${fmt(S.serviced_left_hours)} h</b> in total. The tool records each case with place and time — evidence for fining the operator.`;
 if (A.stop_stats) document.getElementById('scennote').innerHTML +=
-  `<br><br><b>🚏 Доступность.</b> ${A.stop_stats.cases_near_stop} брошенных самокатов стояли ближе 20 м к остановке транспорта — в сумме <b>${fmt(A.stop_stats.stop_hours_total)} ч</b> за 3 недели (медиана ${fmt(A.stop_stats.median_hours_near_stop,1)} ч). Такие самокаты мешают людям на колясках, пожилым и незрячим, поэтому в приоритете у них отдельный вес.`;
+  `<br><br><b>🚏 Accessibility.</b> ${A.stop_stats.cases_near_stop} abandoned vehicles stood within 20 m of a public-transport stop — <b>${fmt(A.stop_stats.stop_hours_total)} h</b> in 3 weeks (median ${fmt(A.stop_stats.median_hours_near_stop,1)} h). They block wheelchair users, older and visually impaired people, so they get their own priority weight.`;
 document.getElementById('assump').textContent =
-  `Параметры от Cascais Próxima: склад (${S.depot.join(', ')}), фургон ${S.capacity} самокатов, смена ${S.shift[0]}:00–${S.shift[1]}:00. Допущения: обед ${S.lunch[0]}–${S.lunch[1]}, только будни, дорога = прямая × ${S.detour}, ${S.speed_kmh} км/ч, ${S.stop_min} мин на погрузку, ${S.unload_min} мин разгрузка. Веса приоритета: время ${S.weights.time}, расстояние от станции ${S.weights.dist}, «не заберут сами» ${S.weights.self}, остановка ${S.weights.stop}.`;
+  `Parameters from Cascais Próxima: depot (${S.depot.join(', ')}), 1 van, ${S.capacity} vehicles per run, shift ${S.shift[0]}:00–${S.shift[1]}:00. Assumptions: lunch ${S.lunch[0]}–${S.lunch[1]}, weekdays only, road = straight line × ${S.detour}, ${S.speed_kmh} km/h, ${S.stop_min} min per pickup, ${S.unload_min} min unloading. Priority weights: time ${S.weights.time}, distance from station ${S.weights.dist}, unlikely to be re-rented ${S.weights.self}, bus stop ${S.weights.stop}.`;
 
 // ---------------------------------------------------------------- новые станции
 const C = A.stations_suggested;
 C.forEach(c => {
   L.circle([c.lat, c.lng], { radius:45, color:'#1baf7a', weight:2, fillOpacity:.2 }).addTo(candLayer);
   L.marker([c.lat, c.lng], { icon:L.divIcon({ className:'', html:`<div class="cand" style="border:0;padding:0"><span class="n">${c.rank}</span></div>`, iconSize:[24,24], iconAnchor:[12,12] }) })
-    .bindTooltip(`<b>Место №${c.rank}</b><br>${c.covered} брошенных случаев в радиусе 45 м<br>${fmt(c.hours)} ч простоя<br>до ближайшей станции ${c.nearest_station_m} м`).addTo(candLayer);
+    .bindTooltip(`<b>Site #${c.rank}</b><br>${c.covered} abandonments within 45 m<br>${fmt(c.hours)} h abandoned<br>${c.nearest_station_m} m to nearest station`).addTo(candLayer);
 });
 AB.forEach(d => L.circleMarker([d.lat, d.lng], { radius:2.5, stroke:false, fillColor:'#eb6834', fillOpacity:.55 }).addTo(candLayer));
 document.getElementById('cands').innerHTML = C.map(c =>
-  `<div class="cand" data-ll="${c.lat},${c.lng}"><span class="n">${c.rank}</span><div><b>${c.covered} случаев</b> · ${fmt(c.hours)} ч простоя<br><span class="muted">до ближайшей станции ${c.nearest_station_m} м</span></div></div>`).join('');
+  `<div class="cand" data-ll="${c.lat},${c.lng}"><span class="n">${c.rank}</span><div><b>${c.covered} cases</b> · ${fmt(c.hours)} h abandoned<br><span class="muted">${c.nearest_station_m} m to nearest station</span></div></div>`).join('');
 document.querySelectorAll('#cands .cand').forEach(el => el.onclick = () => map.setView(el.dataset.ll.split(',').map(Number), 17));
 const coveredTotal = C.reduce((s, c) => s + c.covered, 0);
 document.getElementById('newnote').innerHTML =
-  `<b>Вывод:</b> ${C.length} новых станций покрыли бы только ${coveredTotal} из ${S.abandoned_cases} случаев (${fmt(coveredTotal/S.abandoned_cases*100)}%). Брошенные рассеяны по городу, медиана ${S.median_dist_m} м от станции. Новыми станциями проблему не решить, нужен регулярный сбор, и маршрутизатор — главный инструмент.`;
+  `<b>Conclusion:</b> ${C.length} new stations would cover only ${coveredTotal} of ${S.abandoned_cases} cases (${fmt(coveredTotal/S.abandoned_cases*100)}%). Abandonments are scattered across the city (median ${S.median_dist_m} m from a station). New stations will not solve it — regular collection will, and the route planner is the key tool.`;
 
 renderNow();
 </script>

@@ -7,6 +7,7 @@ data/*.pkl
 data/stops.csv
 
 data/snapshots/
+data/snapshots copy/
 data/live_state.json
 
 data/abandoned.json
