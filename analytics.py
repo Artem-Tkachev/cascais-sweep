@@ -184,46 +184,62 @@ model = {"features": MODEL_FEATURES, "mean": mu.round(6).tolist(), "std": sd.rou
 UNLOAD_MIN = 10            # разгрузка на складе после заезда (допущение)
 W = {"time": 3, "dist": 2, "self": 1.5, "stop": 1.5}   # веса по умолчанию (решение Артёма после ответа João)
 
-def simulate_shift(routing="opt"):
+def simulate_shift(routing="opt", shift=None, lunch=None):
     """Каждый рабочий день фургон делает заезды: берёт до CAPACITY самых важных брошенных самокатов,
     объезжает их (routing='opt' — наш маршрут, 'naive' — по порядку появления), возвращается и планирует снова."""
+    SHIFT_, LUNCH_ = shift or SHIFT, lunch if lunch is not None else LUNCH
     ends = ab.end.copy()
     km_total, collected, loops_n = 0.0, 0, 0
     days = pd.date_range(ab.start.min().normalize(), ab.end.max().normalize())
     workdays = [d for d in days if d.dayofweek < 5]                       # смена по будням (допущение)
     for d in workdays:
-        t, shift_end = d + pd.Timedelta(hours=SHIFT[0]), d + pd.Timedelta(hours=SHIFT[1])
+        t, shift_end = d + pd.Timedelta(hours=SHIFT_[0]), d + pd.Timedelta(hours=SHIFT_[1])
         while t < shift_end:
-            if LUNCH[0] <= t.hour < LUNCH[1]:
-                t = d + pd.Timedelta(hours=LUNCH[1]); continue
+            if LUNCH_[0] <= t.hour < LUNCH_[1]:
+                t = d + pd.Timedelta(hours=LUNCH_[1]); continue
             live = ab[(ab.abandoned_from <= t) & (ends > t) & ~(ab.reserved_at <= t)]
             if live.empty:
                 t += pd.Timedelta(minutes=15); continue
             hours = (t - live.start).dt.total_seconds() / 3600
             score = (W["time"] * np.minimum(hours / 12, 1) + W["dist"] * np.minimum(live.dist_to_station_m / 300, 1)
-                     + W["self"] * (1 - live.p_self) + W["stop"] * live.stop_f)
-            limit = (d + pd.Timedelta(hours=LUNCH[0]) if t.hour < LUNCH[0] else shift_end)
-            take = live.loc[score.sort_values(ascending=False).index[:CAPACITY]]
-            while len(take):
-                p = list(zip(take.lat, take.lng))
-                if routing == "opt":
-                    loop = improve(DEPOT, p, nearest(DEPOT, p, range(len(p))))
-                else:
-                    loop = list(np.argsort(take.abandoned_from.values))
-                L = tour_len(DEPOT, p, loop)
-                dur = L / SPEED_KMH * 60 + len(p) * STOP_MIN + UNLOAD_MIN
-                if t + pd.Timedelta(minutes=dur) <= limit or len(take) == 1:
-                    break
-                take = take.iloc[:-1]                                    # не влезает до обеда/конца смены — убираем самого слабого
-            if t + pd.Timedelta(minutes=dur) > limit:
-                t = limit; continue
+                     + W["self"] * (1 - live.p_self) + W["stop"] * live.stop_f).values
+            limit = (d + pd.Timedelta(hours=LUNCH_[0]) if t.hour < LUNCH_[0] and LUNCH_[0] > SHIFT_[0] else shift_end)
+            budget = (limit - t).total_seconds() / 60 - UNLOAD_MIN
+            p_all = list(zip(live.lat, live.lng))
+            # отбор как на сайте: жадная вставка по «балл / минуты крюка», пока влезает во время и вместимость
+            loop, left = [], set(range(len(p_all)))
+            while left and len(loop) < CAPACITY:
+                best = None
+                for i in left:
+                    for k in range(len(loop) + 1):
+                        a_ = p_all[loop[k - 1]] if k else DEPOT
+                        b_ = p_all[loop[k]] if k < len(loop) else DEPOT
+                        det = hav_km(a_, p_all[i]) + hav_km(p_all[i], b_) - hav_km(a_, b_)
+                        r = score[i] / (det / SPEED_KMH * 60 + STOP_MIN)
+                        if best is None or r > best[0]:
+                            best = (r, i, k)
+                _, i, k = best
+                cand = loop[:k] + [i] + loop[k:]
+                left.discard(i)
+                if tour_len(DEPOT, p_all, cand) / SPEED_KMH * 60 + len(cand) * STOP_MIN <= budget:
+                    loop = cand
+            if not loop:
+                t = limit if budget < 30 else t + pd.Timedelta(minutes=15); continue
+            if routing == "opt":
+                loop = improve(DEPOT, p_all, loop)
+            else:
+                loop = sorted(loop, key=lambda i: live.abandoned_from.values[i])   # тот же набор, объезд по порядку появления
+            p = p_all
+            L = tour_len(DEPOT, p, loop)
+            dur = L / SPEED_KMH * 60 + len(loop) * STOP_MIN + UNLOAD_MIN
+            take = live
             cur, clock = DEPOT, t
             for i in loop:
                 clock += pd.Timedelta(minutes=hav_km(cur, p[i]) / SPEED_KMH * 60 + STOP_MIN); cur = p[i]
                 idx = take.index[i]
                 ends.loc[idx] = min(ends.loc[idx], clock.floor("s"))
             t = t + pd.Timedelta(minutes=dur)
-            km_total += L; collected += len(take); loops_n += 1
+            km_total += L; collected += len(loop); loops_n += 1
     hrs = ((ends - ab.abandoned_from).dt.total_seconds().clip(lower=0) / 3600)
     wd = len(workdays)
     return {"name": routing, "abandoned_hours": round(float(hrs.sum())), "median_h": round(float(hrs.median()), 1),
@@ -261,6 +277,11 @@ hrs0 = ab.abandoned_hours
 scenarios = [{"name": "now", "abandoned_hours": round(float(hrs0.sum())), "median_h": round(float(hrs0.median()), 1),
               "mean_h": round(float(hrs0.mean()), 1), "collected_per_day": 0, "km_per_day": 0, "loops_per_day": 0, "km_per_vehicle": 0},
              simulate_shift("naive"), simulate_shift("opt")]
+# как сейчас у муниципалитета: один заезд в день ~2 ч (João: ~10 самокатов за 2 ч) — наш отбор и маршрут в том же окне
+one = simulate_shift("opt", shift=(10, 12), lunch=(0, 0)); one["name"] = "opt_2h"
+scenarios.insert(1, one)
+FINE_EUR = 4.5            # штраф оператору за каждый собранный муниципалитетом самокат (João Silva)
+TODAY_PER_DAY = 10        # сейчас: ~10 самокатов за один 2-часовой заезд в день (João Silva)
 
 summary = {
     "days": round(DAYS, 1), "stations": len(stations), "vehicles": int(ev.device_id.nunique()),
@@ -280,6 +301,7 @@ summary = {
     "serviced_left_median_after_h": round(float(((serviced.end - serviced.serviced_at).dt.total_seconds() / 3600).median()), 1) if len(serviced) else 0,
     "depot": DEPOT, "capacity": CAPACITY, "detour": DETOUR, "speed_kmh": SPEED_KMH, "stop_min": STOP_MIN,
     "shift": SHIFT, "lunch": LUNCH, "unload_min": UNLOAD_MIN, "weights": W,
+    "fine_eur": FINE_EUR, "today_per_day": TODAY_PER_DAY,
 }
 
 out = {"summary": summary, "model": model, "hourly": hourly, "stations_suggested": cands, "scenarios": scenarios,
