@@ -66,6 +66,11 @@ body {
   height: 100%;
 }
 
+/* OpenStreetMap tiles are colourful: make them light grey so our data stands out */
+.leaflet-tile-pane {
+  filter: grayscale(1) brightness(1.05) contrast(0.9);
+}
+
 
 /* ---------- 4. Header ---------- */
 header {
@@ -211,7 +216,7 @@ select {
   color: var(--text);
 }
 
-button.btn.primary {                /* black ▶ Play button */
+button.btn.primary {                /* black Play button */
   background: var(--text);
   color: #fff;
   border-color: var(--text);
@@ -266,6 +271,10 @@ button.btn.primary {                /* black ▶ Play button */
   margin: 4px 0 2px;
 }
 
+.weights select {
+  width: 100%;
+  margin: 4px 0 2px;
+}
 
 /* ---------- 12. Route stop list ---------- */
 ol.stops {
@@ -291,6 +300,16 @@ ol.stops a {
   font-size: 12.5px;
 }
 
+.stop-num {                         /* 1, 2, 3... next to each stop on the map */
+  width: 18px;
+  height: 18px;
+  background: var(--route);          /* overridden per run in collection.js */
+  color: #fff;
+  font: 700 10px/15px system-ui, sans-serif;
+  text-align: center;
+  border-radius: 9px;
+  border: 1.5px solid #fff;
+}
 
 /* ---------- 13. Scenario table and notes (Impact tab) ---------- */
 table {
@@ -335,11 +354,20 @@ tr.pick td {                        /* highlighted "our route" row */
 }
 
 
-/* ---------- 14. Depot icon on the map ---------- */
+/* ---------- 14. Depot icon on the map ----------
+   Dark rounded square with a white warehouse drawn in SVG (see map.js) */
 .depot-icon {
-  font-size: 20px;
-  line-height: 20px;
-  text-align: center;
+  background: var(--text);
+  border: 2px solid #fff;
+  border-radius: 6px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .35);
+  display: grid;
+  place-items: center;              /* centre the SVG inside the square */
+}
+
+.depot-icon svg {
+  width: 16px;
+  height: 16px;
 }
 
 
@@ -352,65 +380,4 @@ tr.pick td {                        /* highlighted "our route" row */
 
   #map  { grid-row: 1; }
   #side { grid-row: 2; }
-}
-
-
-/* ==========================================================
-   UNUSED on the new site (charts, New stations, pulse).
-   charts.html keeps its own copy of these styles,
-   so this block can be removed once the rewrite is done.
-   ========================================================== */
-.chart {
-  width: 100%;
-}
-
-.chart text {
-  font-size: 10.5px;
-  fill: var(--text-2);
-}
-
-.tip {                              /* tooltip over a chart */
-  position: absolute;
-  pointer-events: none;
-  background: #0b0b0bee;
-  color: #fff;
-  font-size: 12px;
-  padding: 5px 8px;
-  border-radius: 6px;
-  display: none;
-  z-index: 2000;
-}
-
-.cand {
-  display: flex;
-  gap: 10px;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--line);
-  cursor: pointer;
-}
-
-.cand .n {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: var(--aqua);
-  color: #fff;
-  display: grid;
-  place-items: center;
-  font-weight: 700;
-  font-size: 12px;
-  flex: none;
-}
-
-@keyframes pulse {
-  0%   { transform: scale(.6);  opacity: 1; }
-  100% { transform: scale(2.2); opacity: 0; }
-}
-
-.pulse {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  border: 2px solid var(--aqua);
-  animation: pulse 1.2s ease-out 2;
 }
