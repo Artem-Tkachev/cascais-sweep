@@ -10,6 +10,9 @@ data/snapshots/
 data/snapshots copy/
 data/live_state.json
 
+presentation/
+*.pdf
+
 data/abandoned.json
 data/analytics.json
 
@@ -19,3 +22,5 @@ __pycache__/
 .DS_Store
 Thumbs.db
 .vscode/
+presentation/Cascais_Sweep.pdf
+presentation/Cascais_Sweep.pptx

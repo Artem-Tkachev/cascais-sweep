@@ -49,6 +49,7 @@ function drawVehicles(live, scores, chosenSet, t){
         const lines = [
             `<b>Priority ${fmt(scores[i].score, 2)}</b>`,
             `Standing ${fmt(hours, 1)} h · ${fmt(d.dist_to_station_m + 30)} m from a station`,
+            `Battery: ${d.battery == null ? '—' : fmt(d.battery * 100) + '%'}`,
             `Chance a rider takes it: ${fmt((1 - scores[i].notSelf) * 100)}%`
         ];
         if(happened(d.serviced_at, t)){
@@ -104,7 +105,7 @@ function showStops(runs, t) {
         run.stops.forEach(d => {
             n++;
             html += `<li><a target="_blank" href="https://www.google.com/maps/dir/?api=1&destination=${d.lat},${d.lng}">` +
-                    `${fmt(d.dist_to_station_m + 30)} m from station · ${fmt((t - d.ts) / 3600000, 1)} h</a></li>`;
+                    `${fmt(d.dist_to_station_m + 30)} m from station · ${fmt((t - d.ts) / 3600000, 1)} h · ${d.battery == null ? '—' : fmt(d.battery * 100) + '%'}</a></li>`;
         });
         html += '</ol>';
     });
