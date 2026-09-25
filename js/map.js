@@ -17,6 +17,9 @@ const cases = window.ABANDONED.map(d => ({
   t1: Date.parse(d.end)                 // picked up or rented again
 }));
 
+let liveFeed = window.LIVE || null;
+let liveCases = liveFeed ? liveFeed.bikes.map(d => ({...d, ts:Date.parse(d.start) })) : [];
+
 
 // ===== 2. Number formatting =====
 // fmt(1234.567, 1) -> "1,234.6"
@@ -55,6 +58,7 @@ for (const f of window.STATIONS.features) {
 // A layer is a box of map objects we can clear and redraw in one call.
 const vehLayer   = L.layerGroup().addTo(map);   // abandoned vehicles
 const routeLayer = L.layerGroup().addTo(map);   // van route
+const hexLayer = L.layerGroup();
 
 
 // ===== 6. Depot =====

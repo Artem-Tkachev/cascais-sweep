@@ -21,7 +21,7 @@ function chanceSelf(d){
     const x = [
         d.battery ?? 0.5,
         d.dist_to_station_m,
-        d.demand,
+        d.demand ?? model.mean[2],
         Math.sin(hours / 24 * 2 * Math.PI),
         Math.cos(hours / 24 * 2 * Math.PI)
     ];
@@ -58,8 +58,8 @@ function priority(d, t, w){
     const time = Math.min(hours / 12, 1);
     const dist = Math.min(d.dist_to_station_m / 300, 1);
     const notSelf = 1 - chanceSelf(d);
-    const stop = Math.max(0, Math.min(1, (40 - d.stop_dist_m) / 20));
-
+    const stop = d.stop_dist_m == null ? 0 : Math.max(0, Math.min(1, (40 - d.stop_dist_m) / 20));
+    
     const score = w.time * time + w.dist * dist + w.self * notSelf + w.stop * stop;
     return {score, time, dist, notSelf, stop};
 }

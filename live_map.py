@@ -1,6 +1,7 @@
 import json
 import os
 import math
+import time
 from datetime import datetime
 import geopandas as gpd
 from shapely.geometry import shape
@@ -126,22 +127,42 @@ def track(snaps):
     return prev, t
 
 
-
+def write_live(bikes, t):
+    out = []
+    for b in bikes:
+        if not b["abandoned"]:
+            continue
+        out.append({
+            "lat": b["lat"],
+            "lng": b["lon"],
+            "start": datetime.fromtimestamp(b["first_seen"]).strftime("%Y-%m-%dT%H:%M:%S"),
+            "dist_to_station_m": b["dist_m"],
+            "battery": b["current_fuel_percent"],
+            "serviced_at": datetime.fromtimestamp(t).strftime("%Y-%m-%dT%H:%M:%S") if b["serviced"] else None,
+            "reserved_at": None,
+            "demand": None,
+            "stop_dist_m": None,
+        })
+    live = {"updated": t, "bikes": out}
+    tmp = "data/live.js.tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        f.write("window.LIVE = " + json.dumps(live) + ";")
+    os.replace(tmp, "data/live.js")
+    return len(out)
 
 
 zone = load_zone()
-snaps = load_snapshots()
 
-bikes, t = track(snaps)
-
-bikes = classify_zone(bikes, zone)
-
-for b in bikes:
-    b["minutes"] = round((t - b["first_seen"]) / 60)
-    if b["outside"] and b["minutes"] > ABANDON_TIME and not b["is_reserved"]:
-        b["abandoned"] = True
-    else:
-        b["abandoned"] = False
-
-print(sum(b["abandoned"] for b in bikes))
-print(max(b["minutes"] for b in bikes))
+while True:
+    try:
+        snaps = load_snapshots()
+        bikes, t = track(snaps)
+        bikes = classify_zone(bikes, zone)
+        for b in bikes:
+            b["minutes"] = round((t - b["first_seen"]) / 60)
+            b["abandoned"] = b["outside"] and b["minutes"] > ABANDON_TIME and not b["is_reserved"]
+        n = write_live(bikes, t)
+        print(f"{datetime.now():%H:%M:%S}  snapshots: {len(snaps)}  abandoned now: {n}")
+    except Exception as e:
+        print(f"Error: {e}")
+    time.sleep(60 - time.time() % 60 + 10)

@@ -15,12 +15,17 @@
   </header>
   <nav>
     <button data-tab="now" class="on">Collection</button>
+    <button data-tab="kpi">Demand</button>
     <button data-tab="scen">Impact</button>
   </nav>
 
   <!-- ===== COLLECTION TAB ===== -->
   <section id="now" class="on">
     <div class="hero"><b id="count">–</b><span>abandoned now<br><small class="muted">&gt; 30 m from a station, &gt; 2 h</small></span></div>
+    <select id="source" aria-label="Data">
+      <option value="history" selected>History: 3 weeks of Bird events</option>
+      <option value="live">Live: Bird feed right now</option>
+    </select>
     <input type="range" id="t" aria-label="Time">
     <div class="row">
       <button class="btn primary" id="play">Play</button>
@@ -61,6 +66,22 @@
     <p class="muted" style="margin-top:8px">Van: <span id="cap"></span> vehicles per run.</p>
     <div id="stops"></div>
   </section>
+  
+    <!-- ===== DEMAND TAB ===== -->
+  <section id="kpi">
+    <h2>Supply and demand by area</h2>
+    <select id="metric" style="width:100%">
+      <option value="starts">Demand: trips started per day</option>
+      <option value="ends">Supply: trips ended per day</option>
+      <option value="net">Imbalance: ended − started</option>
+      <option value="abandoned">Abandoned vehicles per day</option>
+      <option value="abandon_rate">Share of trip ends abandoned</option>
+    </select>
+    <div class="legend" id="hexlegend"></div>
+    <p class="muted">Hexagons of ~170 m (H3), averages per day over 3 weeks. Hover a hexagon for details.</p>
+    <div class="tiles" id="kpitiles"></div>
+  </section>
+
 
   <!-- ===== IMPACT TAB ===== -->
   <section id="scen">
@@ -76,10 +97,12 @@
 
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="data/data.js"></script>
+<script src="data/live.js"></script>
 <script src="js/map.js"></script>
 <script src="js/priority.js"></script>
 <script src="js/route.js"></script>
 <script src="js/collection.js"></script>
 <script src="js/impact.js"></script>
+<script src="js/demand.js"></script>
 </body>
 </html>

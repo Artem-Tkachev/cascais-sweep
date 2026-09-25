@@ -130,9 +130,12 @@ let renderId = 0;
 
 async function render(withRoute) {
     const myId = ++renderId;
-    const t = tMin + slider.value * STEP;
+    const isLive = el('source').value === 'live';
+    const t = isLive ? liveFeed.updated * 1000 : tMin + slider.value * STEP;
     const w = readWeights();
-    const live = cases.filter(d => d.t0 <= t && d.t1 > t);
+    const live = isLive ? liveCases : cases.filter(d => d.t0 <= t && d.t1 > t);
+    slider.disabled = isLive;
+    el('play').disabled = isLive;
 
     el('count').textContent = live.length;
     el('when').textContent = new Date(t).toLocaleString('en-GB',
@@ -199,6 +202,8 @@ async function render(withRoute) {
 slider.oninput = () => render(false);
 slider.onchange = () => render(true);
 el('mode').onchange = () => render(true);
+el('source').onchange = () => { if (timer) stop(); render(true); };
+if (!liveFeed) el('source').querySelector('[value=live]').disabled = true;
 ['w-time', 'w-dist', 'w-self', 'w-stop', 'shift'].forEach(id => {
     el(id).oninput = () => render(false);
     el(id).onchange = () => render(true);
@@ -232,12 +237,33 @@ el('speed').onchange = () => {
 };
 
 // ===== 8. Tabs =====
-// TODO: click on a tab -> highlight it and show its <section>
 document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
     document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x === b));
     document.querySelectorAll('section').forEach(s => s.classList.toggle('on', s.id === b.dataset.tab));
+    const onDemand = b.dataset.tab === 'kpi';
+    [vehLayer, routeLayer].forEach(l => onDemand ? map.removeLayer(l) : l.addTo(map));
+    onDemand ? hexLayer.addTo(map) : map.removeLayer(hexLayer);
+    if (onDemand && timer) stop();
 });
 
 // ===== 9. Start =====
-// TODO: render(true)
 render(true);
+
+
+// ===== 10. Live: reload data/live.js every minute =====
+function refreshLive(){
+    const s = document.createElement('script');
+    s.src = 'data/live.js?v=' + DataTransfer.now();
+    s.onload = () => {
+        s.remove();
+        liveFeed = window.LIVE;
+        liveCases = liveFeed.bikes.map(d => ({...d, ts: Date.parse(d.start) }));
+        el('source').querySelector('[value=live]').disabled = false;
+        if(el('sourse').value === 'live'){
+            render(true);
+        }
+    };
+    s.onerror = () => s.remove();
+    document.body.appendChild(s);
+}
+setInterval(refreshLive, 60 * 1000);
