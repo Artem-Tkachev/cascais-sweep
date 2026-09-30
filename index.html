@@ -38,6 +38,7 @@
       <span><i class="dot" style="background:var(--sev3)"></i>8+ h</span>
       <span><i class="dot" style="background:var(--blue);border-radius:2px"></i>station</span>
       <span><i class="dot" style="background:#b9b8b3"></i>next run</span>
+      <span><i class="dot skip-dot"></i>skipped: not worth it</span>
     </div>
 
     <h2>Priorities</h2>
@@ -53,6 +54,13 @@
           <option value="many">As many runs as fit</option>
         </select>
       </label>
+      <label>Unprofitable runs
+        <select id="skip">
+          <option value="skip" selected>Skip them: wait for more vehicles</option>
+          <option value="all">Collect all</option>
+        </select>
+      </label>
+      <label>Min efficiency, points per minute <b id="min-rate-v"></b><input type="range" id="min-rate" min="0.05" max="0.5" step="0.05" value="0.15"></label>
     </div>
     <p class="muted" id="picked"></p>
 
@@ -64,6 +72,7 @@
       <div class="tile"><b id="r-time">–</b><small>run time</small></div>
     </div>
     <p class="muted" style="margin-top:8px">Van: <span id="cap"></span> vehicles per run.</p>
+    <div id="compare"></div>
     <div id="stops"></div>
   </section>
   

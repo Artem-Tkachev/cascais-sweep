@@ -183,13 +183,21 @@ model = {"features": MODEL_FEATURES, "mean": mu.round(6).tolist(), "std": sd.rou
 # ------------------------------------------------------------------ simulation of the municipal van (shift 9–18)
 UNLOAD_MIN = 10            # unloading at the depot after each run (assumption)
 W = {"time": 3, "dist": 2, "self": 1.5, "stop": 1.5}   # default weights (chosen by Artem after talking to João)
+MIN_RATE = 0.15            # efficiency rule: a run must give at least 0.15 priority points per minute (same as the website)
 
-def simulate_shift(routing="opt", shift=None, lunch=None):
+def time_level(hours):
+    """0–12 h: hours / 12; after 12 h: +1 every time the waiting time doubles (24 h = 2, 48 h = 3, 96 h = 4).
+    Same as timeLevel() in priority.js: an old vehicle keeps getting more urgent."""
+    h = np.asarray(hours, dtype=float)
+    return np.where(h <= 12, np.maximum(h, 0) / 12, 1 + np.log2(np.maximum(h, 12) / 12))
+
+def simulate_shift(routing="opt", shift=None, lunch=None, min_rate=0):
     """Every working day the van makes runs: it takes up to CAPACITY of the most important abandoned vehicles,
-    collects them (routing='opt' = our route, 'naive' = first-come order), returns and plans again."""
+    collects them (routing='opt' = our route, 'naive' = first-come order), returns and plans again.
+    min_rate > 0: skip runs that are not worth it (points per minute < min_rate) and wait for more vehicles."""
     SHIFT_, LUNCH_ = shift or SHIFT, lunch if lunch is not None else LUNCH
     ends = ab.end.copy()
-    km_total, collected, loops_n = 0.0, 0, 0
+    km_total, collected, loops_n, van_min = 0.0, 0, 0, 0.0
     days = pd.date_range(ab.start.min().normalize(), ab.end.max().normalize())
     workdays = [d for d in days if d.dayofweek < 5]                       # weekdays only (assumption)
     for d in workdays:
@@ -201,7 +209,7 @@ def simulate_shift(routing="opt", shift=None, lunch=None):
             if live.empty:
                 t += pd.Timedelta(minutes=15); continue
             hours = (t - live.start).dt.total_seconds() / 3600
-            score = (W["time"] * np.minimum(hours / 12, 1) + W["dist"] * np.minimum(live.dist_to_station_m / 300, 1)
+            score = (W["time"] * time_level(hours.values) + W["dist"] * np.minimum(live.dist_to_station_m / 300, 1)
                      + W["self"] * (1 - live.p_self) + W["stop"] * live.stop_f).values
             limit = (d + pd.Timedelta(hours=LUNCH_[0]) if t.hour < LUNCH_[0] and LUNCH_[0] > SHIFT_[0] else shift_end)
             budget = (limit - t).total_seconds() / 60 - UNLOAD_MIN
@@ -223,6 +231,11 @@ def simulate_shift(routing="opt", shift=None, lunch=None):
                 left.discard(i)
                 if tour_len(DEPOT, p_all, cand) / SPEED_KMH * 60 + len(cand) * STOP_MIN <= budget:
                     loop = cand
+            # efficiency rule: is this run worth driving now, or is it better to wait for more vehicles?
+            if loop and min_rate > 0:
+                run_min = tour_len(DEPOT, p_all, improve(DEPOT, p_all, loop)) / SPEED_KMH * 60 + len(loop) * STOP_MIN + UNLOAD_MIN
+                if score[loop].sum() / run_min < min_rate:
+                    loop = []
             if not loop:
                 t = limit if budget < 30 else t + pd.Timedelta(minutes=15); continue
             if routing == "opt":
@@ -239,13 +252,13 @@ def simulate_shift(routing="opt", shift=None, lunch=None):
                 idx = take.index[i]
                 ends.loc[idx] = min(ends.loc[idx], clock.floor("s"))
             t = t + pd.Timedelta(minutes=dur)
-            km_total += L; collected += len(loop); loops_n += 1
+            km_total += L; collected += len(loop); loops_n += 1; van_min += dur
     hrs = ((ends - ab.abandoned_from).dt.total_seconds().clip(lower=0) / 3600)
     wd = len(workdays)
     return {"name": routing, "abandoned_hours": round(float(hrs.sum())), "median_h": round(float(hrs.median()), 1),
             "mean_h": round(float(hrs.mean()), 1), "collected_per_day": round(collected / wd, 1),
             "km_per_day": round(km_total / wd, 1), "loops_per_day": round(loops_n / wd, 1),
-            "km_per_vehicle": round(km_total / max(collected, 1), 2)}
+            "km_per_vehicle": round(km_total / max(collected, 1), 2), "van_h_per_day": round(van_min / 60 / wd, 1)}
 
 # ------------------------------------------------------------------ public transport stops: "blocks pedestrians"
 # stops.csv (TML, GTFS format): stop_id, stop_name, stop_lat, stop_lon ...
@@ -275,8 +288,12 @@ ab["p_self"] = clf.predict_proba((model_features(ab) - mu) / sd)[:, 1]
 serviced = ab[ab.serviced_at.notna() & (ab.serviced_at >= ab.abandoned_from)]
 hrs0 = ab.abandoned_hours
 scenarios = [{"name": "now", "abandoned_hours": round(float(hrs0.sum())), "median_h": round(float(hrs0.median()), 1),
-              "mean_h": round(float(hrs0.mean()), 1), "collected_per_day": 0, "km_per_day": 0, "loops_per_day": 0, "km_per_vehicle": 0},
+              "mean_h": round(float(hrs0.mean()), 1), "collected_per_day": 0, "km_per_day": 0, "loops_per_day": 0, "km_per_vehicle": 0,
+              "van_h_per_day": 0},
              simulate_shift("naive"), simulate_shift("opt")]
+# full shift, our route + efficiency rule (skip runs that are not worth it)
+rule = simulate_shift("opt", min_rate=MIN_RATE); rule["name"] = "opt_rule"
+scenarios.append(rule)
 # like the municipality today: one ~2 h run a day (João: ~10 vehicles in 2 h), with our selection and route
 one = simulate_shift("opt", shift=(10, 12), lunch=(0, 0)); one["name"] = "opt_2h"
 scenarios.insert(1, one)
@@ -301,6 +318,7 @@ summary = {
     "serviced_left_median_after_h": round(float(((serviced.end - serviced.serviced_at).dt.total_seconds() / 3600).median()), 1) if len(serviced) else 0,
     "depot": DEPOT, "capacity": CAPACITY, "detour": DETOUR, "speed_kmh": SPEED_KMH, "stop_min": STOP_MIN,
     "shift": SHIFT, "lunch": LUNCH, "unload_min": UNLOAD_MIN, "weights": W,
+    "min_rate": MIN_RATE,
     "fine_eur": FINE_EUR, "today_per_day": TODAY_PER_DAY,
 }
 

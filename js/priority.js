@@ -43,19 +43,33 @@ function readWeights(){
         self: val('w-self'),
         stop: val('w-stop'),
         runHours: val('shift'),
-        mode: document.getElementById('mode').value
+        mode: document.getElementById('mode').value,
+        skip: document.getElementById('skip').value === 'skip',   // skip runs that are not worth it
+        minRate: val('min-rate')                                   // points per minute a run must give
     };
 }
 
 
-// ===== 4. Priority of one vehicle at moment t =====
+// ===== 4. Time level: grows all the time, slower after 12 h =====
+// 0–12 h: hours / 12 (6 h = 0.5, 12 h = 1).
+// after 12 h: +1 every time the waiting time doubles (24 h = 2, 48 h = 3, 96 h = 4).
+// So a vehicle standing 4 days is clearly more urgent than one standing 13 hours.
+function timeLevel(hours){
+    if(hours <= 12){
+        return Math.max(0, hours / 12);
+    }
+    return 1 + Math.log2(hours / 12);
+}
+
+
+// ===== 5. Priority of one vehicle at moment t =====
 function priority(d, t, w){
     if(happened(d.reserved_at, t)){
         return {score: 0, time: 0, dist: 0, notSelf: 0, stop: 0};
     }
 
     const hours = (t - d.ts) / 3600000;
-    const time = Math.min(hours / 12, 1);
+    const time = timeLevel(hours);
     const dist = Math.min(d.dist_to_station_m / 300, 1);
     const notSelf = 1 - chanceSelf(d);
     const stop = d.stop_dist_m == null ? 0 : Math.max(0, Math.min(1, (40 - d.stop_dist_m) / 20));

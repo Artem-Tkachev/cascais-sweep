@@ -311,6 +311,29 @@ ol.stops a {
   border: 1.5px solid #fff;
 }
 
+.loopname.skipped {                 /* "Skipped run 3 · ..." */
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.warn {                             /* "not worth it" in Collect all mode */
+  color: var(--orange);
+}
+
+.dot.skip-dot {                     /* legend: white dot with a grey dashed border */
+  background: #fff;
+  border: 1.5px dashed #8a8984;
+}
+
+#compare table {
+  margin-top: 4px;
+}
+
+tr.diff td {
+  color: var(--text-2);
+  font-size: 12px;
+}
+
 /* ---------- 13. Scenario table and notes (Impact tab) ---------- */
 table {
   width: 100%;

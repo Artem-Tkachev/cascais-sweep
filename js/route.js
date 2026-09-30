@@ -119,7 +119,8 @@ function roughMinutes(points){
     return km / summary.speed_kmh * 60 + points.length * summary.stop_min;
 }
 
-function quickDay(points, scores, w){
+// ages = how many hours each vehicle has been standing
+function quickDay(points, scores, w, ages){
     const runs = [];
     const left = scores.slice();
     let budget = w.runHours * 60;
@@ -128,27 +129,54 @@ function quickDay(points, scores, w){
         if(!tour.length){
             break;
         }
-        runs.push(tour);
+        const minutes = roughMinutes(tour.map(i => points[i])) + summary.unload_min;
+        runs.push(rateRun({ tour }, tour, left, minutes, ages));
         tour.forEach(i => left[i] = 0);
-        budget -= roughMinutes(tour.map(i => points[i])) + summary.unload_min;
+        budget -= minutes;
         if(w.mode === 'one'){
             break;
         }
     }
-    return runs;
+    return markWorth(runs, w);
 }
 
-async function planDay(items, scores, w) {
+async function planDay(items, scores, w, t) {
   const runs = [];
   const left = scores.slice();
+  const ages = items.map(d => (t - d.ts) / 3600000);
   let budget = w.runHours * 60;
   while (true) {
     const run = await planRun(items, left, budget);
     if (!run.chosen.length) break;
-    runs.push(run);
+    runs.push(rateRun(run, run.chosen, left, run.total + summary.unload_min, ages));
     run.chosen.forEach(i => left[i] = 0);
     budget -= run.total + summary.unload_min;
     if (w.mode === 'one') break;
   }
+  return markWorth(runs, w);
+}
+
+
+// ===== 7. Is a run worth driving now? =====
+// rate = priority points the van collects per minute of the run (driving + pickups + unloading).
+// A run is worth it if rate >= minRate. Old vehicles do not wait forever:
+// their time level keeps growing (priority.js), so their run passes the minimum sooner or later.
+// We always plan every run, so the site can show what "skip unprofitable" drops.
+
+function rateRun(run, chosen, scores, minutes, ages) {
+  const value = chosen.reduce((sum, i) => sum + scores[i], 0);
+  run.rate = value / minutes;
+  run.oldestH = Math.max(...chosen.map(i => ages[i]));
+  return run;
+}
+
+function markWorth(runs, w) {
+  let waiting = false;                  // after the first unprofitable run, the van waits: later runs wait too
+  runs.forEach(run => {
+    run.worth = run.rate >= w.minRate;
+    if (!run.worth) waiting = true;
+    run.inSkipPlan = !waiting;          // part of the "skip unprofitable" plan?
+    run.skipped = w.skip && !run.inSkipPlan;
+  });
   return runs;
 }

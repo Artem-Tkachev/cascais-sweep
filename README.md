@@ -27,11 +27,14 @@ One municipal van, weekdays 09:00–18:00, 18 vehicles per run:
 | Scenario | Vehicle-hours abandoned | Collected / day | km / day |
 |---|---|---|---|
 | Bird only (no municipal van) | 24,791 | — | — |
-| Our tool, one 2 h run a day | 18,840 (−24%) | 12.7 (~10 in our data) | 21 |
-| Full shift, first-come order | 11,642 (−53%) | 27.5 | 134 |
-| **Full shift, our route** | **10,246 (−59%)** | **30.7** | **94** |
+| Our tool, one 2 h run a day | 17,644 (−29%) | 12.2 (~10 in our data) | 21 |
+| Full shift, first-come order | 11,994 (−52%) | 28.1 | 133 |
+| **Full shift, our route** | **10,328 (−58%)** | **31.4** | **93** |
+| Full shift, our route, skip unprofitable runs | 10,980 (−56%) | 29.0 | 71 |
 
-Fines: about €45/day in our data period (~10 vehicles) → €138/day with a full shift (≈ +€2,000 a month).
+The last runs of a full shift carry few vehicles over long distances (run 1: ~18 vehicles, 1.7 km each; run 4: ~3 vehicles, 5.5 km each). Skipping runs worth less than 0.15 priority points per minute keeps almost all of the effect (−56% instead of −58%) with 23% fewer km and 1.5 h less van time a day.
+
+Fines: about €45/day in our data period (~10 vehicles) → €141/day with a full shift (≈ +€2,100 a month).
 
 ---
 
@@ -43,9 +46,10 @@ Open `index.html` through a local server (see *Run it*) or on GitHub Pages.
 - Move through 3 weeks of real data (15-minute steps) or switch to **Live** — Bird's public feed, refreshed every minute.
 - Every abandoned vehicle gets a priority score:
   `score = 3·time + 2·distance + 1.5·(1 − chance a rider takes it) + 1.5·bus stop`
-  (time: hours / 12, max 1 · distance: metres beyond the zone / 300, max 1 · bus stop: 1 within 20 m, 0 beyond 40 m · reserved vehicles: 0). Weights are sliders.
+  (time: hours / 12 up to 12 h, then +1 every time the waiting time doubles — 24 h = 2, 48 h = 3, 96 h = 4 · distance: metres beyond the zone / 300, max 1 · bus stop: 1 within 20 m, 0 beyond 40 m · reserved vehicles: 0). Weights are sliders.
 - The planner picks the vehicles worth the most per minute of detour, within the van capacity (18) and the time available — **one run** or **as many runs as fit**.
 - The order and the path come from **OSRM** (open-source routing on OpenStreetMap), compared with visiting the same vehicles in first-come order. Numbered stop list with a navigation link for the driver.
+- **Unprofitable runs**: a run is worth driving if it gives at least *min efficiency* priority points per minute (driving + pickups + unloading). Old vehicles do not wait forever: their time level keeps growing, so their run passes the minimum sooner or later. *Skip them* = the van waits for more vehicles; *Collect all* = old behaviour. Skipped vehicles and runs are drawn grey and dashed, and a table compares both plans (runs, vehicles, km, time).
 - While dragging a slider or playing the timeline, a dashed straight-line preview is shown; the street route is requested when you release.
 
 **Demand** — supply/demand KPIs per H3 hexagon (~170 m): trips started (demand), trips ended (supply), imbalance, abandonments per day, share of trip ends abandoned.

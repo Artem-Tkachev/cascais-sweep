@@ -34,26 +34,36 @@ function colourByHours(h){
     return '#eda100';
 }
 const WAIT_COLOUR = '#b9b8b3';
+const SKIP_COLOUR = '#8a8984';        // skipped runs: grey dashed outline, white inside
 const ROUTE_COLOUR = '#0d366b';
 
 
 // ===== 4. Draw vehicles =====
 //   - clear vehLayer
-//   - one circle per vehicle: coloured if in this run, grey otherwise
+//   - one circle per vehicle: coloured if in this run, grey otherwise,
+//     white with a dashed outline if its run was skipped (not worth it)
 //   - tooltip: priority, hours standing, metres from station,
 //              chance a rider takes it, "Bird serviced it and left it"
-function drawVehicles(live, scores, chosenSet, t){
+//   - skipped = Map: vehicle index -> rate of its skipped run
+function drawVehicles(live, scores, chosenSet, t, skipped = new Map(), minRate = 0){
     vehLayer.clearLayers();
     live.forEach((d, i) => {
         const hours = (t - d.ts) / 3600000;
         const lines = [
             `<b>Priority ${fmt(scores[i].score, 2)}</b>`,
-            `Standing ${fmt(hours, 1)} h · ${fmt(d.dist_to_station_m + 30)} m from a station`,
+            `Standing ${fmt(hours, 1)} h (time level ${fmt(scores[i].time, 1)}) · ${fmt(d.dist_to_station_m + 30)} m from a station`,
             `Battery: ${d.battery == null ? '—' : fmt(d.battery * 100) + '%'}`,
             `Chance a rider takes it: ${fmt((1 - scores[i].notSelf) * 100)}%`
         ];
         if(happened(d.serviced_at, t)){
             lines.push('<b>Bird serviced it on site and left it</b>');
+        }
+        if(skipped.has(i)){
+            lines.push(`<b>Skipped:</b> its run gives ${fmt(skipped.get(i), 2)} points/min (min ${fmt(minRate, 2)})`);
+            L.circleMarker([d.lat, d.lng], {
+                radius: 7, color: SKIP_COLOUR, weight: 2, dashArray: '3 2', fillColor: '#fff', fillOpacity: 1
+            }).bindTooltip(lines.join('<br>')).addTo(vehLayer);
+            return;
         }
 
         L.circleMarker([d.lat, d.lng], {
@@ -95,12 +105,27 @@ function drawPreview(runs) {
     });
 }
 
-function showStops(runs, t) {
+// skipped runs: thin grey dashed line, so you can see where the van does NOT go
+function drawSkipped(lines) {
+    lines.forEach(line => {
+        L.polyline(line, { color: SKIP_COLOUR, weight: 2, opacity: 0.6, dashArray: '2 6' }).addTo(routeLayer);
+    });
+}
+
+// Map: vehicle index -> rate of its skipped run (for drawVehicles)
+function skippedMap(runs, key) {
+    const m = new Map();
+    runs.forEach(run => run[key].forEach(i => m.set(i, run.rate)));
+    return m;
+}
+
+function showStops(runs, skippedRuns, t, minRate) {
     let html = '';
     let n = 0;
     runs.forEach((run, r) => {
+        const tag = run.worth ? '' : ' · <span class="warn">not worth it</span>';
         html += `<div class="loopname"><i class="dot" style="background:${runColour(r)}"></i>` +
-                `Run ${r + 1} · ${run.stops.length} vehicles · ${fmt(run.km, 1)} km</div>` +
+                `Run ${r + 1} · ${run.stops.length} vehicles · ${fmt(run.km, 1)} km · ${fmt(run.rate, 2)} pts/min${tag}</div>` +
                 `<ol class="stops" start="${n + 1}">`;
         run.stops.forEach(d => {
             n++;
@@ -109,7 +134,45 @@ function showStops(runs, t) {
         });
         html += '</ol>';
     });
+    skippedRuns.forEach((run, r) => {
+        html += `<div class="loopname skipped"><i class="dot skip-dot"></i>` +
+                `Skipped run ${runs.length + r + 1} · ${run.chosen.length} vehicles · ${fmt(run.trip.km, 1)} km · ` +
+                `${fmt(run.rate, 2)} pts/min &lt; ${fmt(minRate, 2)}</div>`;
+    });
     el('stops').innerHTML = html;
+}
+
+// "Collect all" vs "Skip unprofitable": runs, vehicles, km, time, km per vehicle
+function planStats(plans) {
+    const vehicles = plans.reduce((sum, p) => sum + p.chosen.length, 0);
+    const km = plans.reduce((sum, p) => sum + p.trip.km, 0);
+    const minutes = plans.reduce((sum, p) => sum + p.total, 0) + Math.max(0, plans.length - 1) * summary.unload_min;
+    return { runs: plans.length, vehicles, km, minutes };
+}
+
+const hm = minutes => `${Math.floor(minutes / 60)} h ${String(Math.round(minutes % 60)).padStart(2, '0')}`;
+
+function showCompare(plans, w) {
+    const all = planStats(plans);
+    const skip = planStats(plans.filter(p => p.inSkipPlan));
+    const row = (name, s, on) =>
+        `<tr class="${on ? 'pick' : ''}"><td>${name}</td><td>${s.runs}</td><td>${s.vehicles}</td>` +
+        `<td>${fmt(s.km, 1)}</td><td>${hm(s.minutes)}</td><td>${s.vehicles ? fmt(s.km / s.vehicles, 2) : '–'}</td></tr>`;
+    const diff = (a, b, f) => (b - a === 0 ? '0' : (b - a > 0 ? '+' : '−') + f(Math.abs(b - a)));
+    let html = '<h2>Collect all vs skip unprofitable</h2><table>' +
+        '<tr><th></th><th>Runs</th><th>Vehicles</th><th>km</th><th>Time</th><th>km/veh</th></tr>' +
+        row('Collect all', all, !w.skip) +
+        row(`Skip &lt; ${fmt(w.minRate, 2)} pts/min`, skip, w.skip) +
+        `<tr class="diff"><td>Difference</td><td>${diff(all.runs, skip.runs, x => x)}</td>` +
+        `<td>${diff(all.vehicles, skip.vehicles, x => x)}</td><td>${diff(all.km, skip.km, x => fmt(x, 1))}</td>` +
+        `<td>${diff(all.minutes, skip.minutes, hm)}</td><td></td></tr></table>`;
+    if (all.runs === skip.runs) {
+        html += '<p class="muted">Every run is worth driving: nothing to skip.</p>';
+    } else {
+        html += `<p class="muted">Skipping saves ${fmt(all.km - skip.km, 1)} km and ${hm(all.minutes - skip.minutes)} of van time ` +
+                `for ${all.vehicles - skip.vehicles} vehicle(s). They wait until more vehicles gather nearby or until they have stood long enough to be worth the trip.</p>`;
+    }
+    el('compare').innerHTML = html;
 }
 
 function showTiles(km, naiveKm, minutes) {
@@ -122,6 +185,7 @@ function showTiles(km, naiveKm, minutes) {
 function clearRoute() {
     routeLayer.clearLayers();
     el('stops').innerHTML = '';
+    el('compare').innerHTML = '';
     ['r-km', 'r-naive', 'r-save', 'r-time'].forEach(id => el(id).textContent = '–');
 }
 
@@ -143,18 +207,24 @@ async function render(withRoute) {
         { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
     ['w-time', 'w-dist', 'w-self', 'w-stop'].forEach(id => el(id + '-v').textContent = el(id).value);
     el('shift-v').textContent = w.runHours + ' h';
+    el('min-rate-v').textContent = fmt(w.minRate, 2);
 
     const scores = live.map(d => priority(d, t, w));
     const points = live.map(d => [d.lat, d.lng]);
+    const ages = live.map(d => (t - d.ts) / 3600000);
 
     // dragging / Play: instant preview, straight dashed lines
     if (!withRoute) {
-        const quick = quickDay(points, scores.map(s => s.score), w);
+        const quick = quickDay(points, scores.map(s => s.score), w, ages);
+        const kept = quick.filter(r => !r.skipped);
+        const skipped = quick.filter(r => r.skipped);
         clearRoute();
-        drawVehicles(live, scores, new Set(quick.flat()), t);
-        drawPreview(quick.map(tour => tour.map(i => points[i])));
+        drawVehicles(live, scores, new Set(kept.flatMap(r => r.tour)), t, skippedMap(skipped, 'tour'), w.minRate);
+        drawPreview(kept.map(r => r.tour.map(i => points[i])));
+        drawSkipped(skipped.map(r => [depot, ...r.tour.map(i => points[i]), depot]));
+        const skipText = skipped.length ? ` ${skipped.length} run(s) skipped: not worth it.` : '';
         el('picked').textContent =
-            `Preview: ${quick.length} run(s), ${quick.flat().length} of ${live.length} vehicles. Release to build the street route.`;
+            `Preview: ${kept.length} run(s), ${kept.flatMap(r => r.tour).length} of ${live.length} vehicles.${skipText} Release to build the street route.`;
         return;
     }
 
@@ -163,11 +233,23 @@ async function render(withRoute) {
     el('picked').textContent = 'Planning the route…';
 
     try {
-        const plans = await planDay(live, scores.map(s => s.score), w);
+        const all = await planDay(live, scores.map(s => s.score), w, t);
         if (myId !== renderId) return;
         clearRoute();
-        if (!plans.length) {
+        if (!all.length) {
             el('picked').textContent = 'Nothing to collect in this time.';
+            return;
+        }
+        const plans = all.filter(p => !p.skipped);       // runs the van really drives
+        const skipped = all.filter(p => p.skipped);      // not worth it: the van waits
+        showCompare(all, w);
+        drawSkipped(skipped.map(p => p.trip.line));
+        if (!plans.length) {
+            drawVehicles(live, scores, new Set(), t, skippedMap(skipped, 'chosen'), w.minRate);
+            showStops([], skipped, t, w.minRate);
+            el('picked').textContent =
+                `Not worth driving now: the best run gives ${fmt(all[0].rate, 2)} points/min (min ${fmt(w.minRate, 2)}). ` +
+                `The van waits for more vehicles.`;
             return;
         }
 
@@ -178,7 +260,8 @@ async function render(withRoute) {
             const firstCome = plan.chosen.map(i => live[i]).sort((a, b) => a.t0 - b.t0);
             const naive = await roadRoute(firstCome.map(d => [d.lat, d.lng]));
             naiveKm += naive.km;
-            runs.push({ stops, line: plan.trip.line, km: plan.trip.km });
+            runs.push({ stops, line: plan.trip.line, km: plan.trip.km, rate: plan.rate, worth: plan.worth,
+                        oldestH: plan.oldestH });
         }
         if (myId !== renderId) return;
 
@@ -186,12 +269,13 @@ async function render(withRoute) {
         const km      = runs.reduce((sum, run) => sum + run.km, 0);
         const minutes = plans.reduce((sum, p) => sum + p.total, 0) + (plans.length - 1) * summary.unload_min;
 
-        drawVehicles(live, scores, new Set(chosen), t);
+        drawVehicles(live, scores, new Set(chosen), t, skippedMap(skipped, 'chosen'), w.minRate);
         drawRoutes(runs);
-        showStops(runs, t);
+        showStops(runs, skipped, t, w.minRate);
         showTiles(km, naiveKm, minutes);
+        const skipText = skipped.length ? ` ${skipped.length} run(s) skipped: not worth it.` : '';
         el('picked').textContent =
-            `${plans.length} run(s) in ${w.runHours} h: the van collects ${chosen.length} of ${live.length}. Grey ones wait.`;
+            `${plans.length} run(s) in ${w.runHours} h: the van collects ${chosen.length} of ${live.length}.${skipText} Grey ones wait.`;
     } catch (err) {
         if (myId !== renderId) return;
         clearRoute();
@@ -203,9 +287,10 @@ async function render(withRoute) {
 slider.oninput = () => render(false);
 slider.onchange = () => render(true);
 el('mode').onchange = () => render(true);
+el('skip').onchange = () => render(true);
 el('source').onchange = () => { if (timer) stop(); render(true); };
 if (!liveFeed) el('source').querySelector('[value=live]').disabled = true;
-['w-time', 'w-dist', 'w-self', 'w-stop', 'shift'].forEach(id => {
+['w-time', 'w-dist', 'w-self', 'w-stop', 'shift', 'min-rate'].forEach(id => {
     el(id).oninput = () => render(false);
     el(id).onchange = () => render(true);
 });
@@ -254,13 +339,13 @@ render(true);
 // ===== 10. Live: reload data/live.js every minute =====
 function refreshLive(){
     const s = document.createElement('script');
-    s.src = 'data/live.js?v=' + DataTransfer.now();
+    s.src = 'data/live.js?v=' + Date.now();
     s.onload = () => {
         s.remove();
         liveFeed = window.LIVE;
         liveCases = liveFeed.bikes.map(d => ({...d, ts: Date.parse(d.start) }));
         el('source').querySelector('[value=live]').disabled = false;
-        if(el('sourse').value === 'live'){
+        if(el('source').value === 'live'){
             render(true);
         }
     };

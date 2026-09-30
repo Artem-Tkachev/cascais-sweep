@@ -6,24 +6,27 @@
 
 
 // ===== 1. Scenarios =====
-// analytics.scenarios = 4 simulated ways of working over 3 weeks:
+// analytics.scenarios = 5 simulated ways of working over 3 weeks:
 //   now (Bird only), opt_2h (our tool, one 2 h run),
-//   naive (full shift, first-come order), opt (full shift, our route)
+//   naive (full shift, first-come order), opt (full shift, our route),
+//   opt_rule (full shift, our route, runs that are not worth it are skipped)
 const scenarios = analytics.scenarios;
 const base  = scenarios[0].abandoned_hours;
 const opt   = scenarios.find(s => s.name === 'opt');
 const naive = scenarios.find(s => s.name === 'naive');
 const two   = scenarios.find(s => s.name === 'opt_2h');
+const rule  = scenarios.find(s => s.name === 'opt_rule');
 
 const NAMES = {
   now:    'Today: Bird only',
   opt_2h: 'Our tool, one 2 h run',
   naive:  'Full shift, first-come order',
-  opt:    'Full shift, our route'
+  opt:    'Full shift, our route',
+  opt_rule: 'Full shift, our route, skip unprofitable runs'
 };
 
 // ===== 2. Table =====
-let rows = '<tr><th>Scenario</th><th>Hours abandoned</th><th>Average</th><th>Collected/day</th><th>km/day</th></tr>';
+let rows = '<tr><th>Scenario</th><th>Hours abandoned</th><th>Average</th><th>Collected/day</th><th>km/day</th><th>Van h/day</th></tr>';
 
 scenarios.forEach((s, i) => {
   const cut = i === 0 ? '' : ` <small class="muted">(−${fmt((1 - s.abandoned_hours / base) * 100)}%)</small>`;
@@ -32,7 +35,8 @@ scenarios.forEach((s, i) => {
     `<td>${fmt(s.abandoned_hours)}${cut}</td>` +
     `<td>${fmt(s.mean_h, 1)} h</td>` +
     `<td>${i === 0 ? '—' : fmt(s.collected_per_day, 1)}</td>` +
-    `<td>${i === 0 ? '—' : fmt(s.km_per_day)}</td></tr>`;
+    `<td>${i === 0 ? '—' : fmt(s.km_per_day)}</td>` +
+    `<td>${i === 0 ? '—' : fmt(s.van_h_per_day, 1)}</td></tr>`;
 });
 
 document.getElementById('scentable').innerHTML = rows;
@@ -47,6 +51,10 @@ let notes =
   `Over the <b>full 09:00–18:00 shift</b> one van collects <b>${fmt(opt.collected_per_day, 1)} a day</b> ` +
   `and cuts the time vehicles stand abandoned by <b>${fmt((1 - opt.abandoned_hours / base) * 100)}%</b>. ` +
   `It drives ${fmt(opt.km_per_day)} km a day instead of ${fmt(naive.km_per_day)} km in first-come order.` +
+  (rule ? `<br><br><b>Skip unprofitable runs.</b> The last runs of the day carry few vehicles over long distances. ` +
+    `If the van only drives runs worth at least ${fmt(summary.min_rate, 2)} priority points per minute ` +
+    `(old vehicles get a higher priority every time their waiting time doubles, so they do not wait forever), it still cuts abandoned time by <b>${fmt((1 - rule.abandoned_hours / base) * 100)}%</b>, ` +
+    `but drives <b>${fmt(rule.km_per_day)} km</b> instead of ${fmt(opt.km_per_day)} km and is busy <b>${fmt(rule.van_h_per_day, 1)} h</b> instead of ${fmt(opt.van_h_per_day, 1)} h a day.` : '') +
   `<br><br><b>Fines.</b> Bird pays ${fmt(fine, 1)} € per collected vehicle: ${fmt(today * fine)} € a day today → ` +
   `<b>${fmt(opt.collected_per_day * fine)} € a day</b>, about <b>+${fmt((opt.collected_per_day - today) * fine * 21.7)} € a month</b>.` +
   `<br><br><b>Bird was there and left it.</b> In ${summary.serviced_left_cases} cases a Bird technician serviced an already abandoned vehicle on the spot and left it. ` +
